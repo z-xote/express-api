@@ -2,6 +2,10 @@ import express from 'express';
 import sliceRouter from './slices/index';
 import { errorHandler, apiKeyAuth } from './infra/middleware/index';
 import { ENV } from './infra/config/env';
+import { createLogger } from './infra/utils/logger';
+import chalk from 'chalk';
+
+const logger = createLogger('express-api');
 
 export function createApp() {
   const app = express();
@@ -25,23 +29,23 @@ export function createApp() {
 
 // Add process error handlers
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
+  logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled Rejection', { reason });
   process.exit(1);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('👋 SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('\n👋 SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received, shutting down gracefully');
   process.exit(0);
 });
 
@@ -50,14 +54,17 @@ const app = createApp();
 const port = Number(ENV.PORT) || 3000;
 
 const server = app.listen(port, () => {
-  console.log(`🔵 version: ${ENV.APP_VERSION}`);
-  console.log(`🚀 Server listening on port ${port}`);
-  console.log(`📍 Health check: http://localhost:${port}/health`);
+  // Clean server start message
+  logger.info('Server started', { 
+    version: ENV.APP_VERSION, 
+    port, 
+    healthCheck: `http://localhost:${port}/health` 
+  });
 });
 
 // Handle server errors
 server.on('error', (error) => {
-  console.error('❌ Server error:', error);
+  logger.error('Server failed to start', { error: error.message });
   process.exit(1);
 });
 
